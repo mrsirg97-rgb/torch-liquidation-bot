@@ -22,10 +22,7 @@ export class Liquidator {
     this.log = log
   }
 
-  async tryLiquidate(
-    connection: Connection,
-    loan: ScoredLoan,
-  ): Promise<LiquidationResult | null> {
+  async tryLiquidate(connection: Connection, loan: ScoredLoan): Promise<LiquidationResult | null> {
     if (loan.position.health !== 'liquidatable') {
       this.log.debug(`skipping ${loan.borrower.slice(0, 8)}... — not liquidatable yet`)
       return null

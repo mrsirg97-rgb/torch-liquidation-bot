@@ -144,21 +144,13 @@ export class Monitor {
 
     for (const holder of holders) {
       try {
-        const position = await getLoanPosition(
-          this.connection,
-          token.mint,
-          holder.address,
-        )
+        const position = await getLoanPosition(this.connection, token.mint, holder.address)
 
         if (position.health === 'none') continue
 
         borrowers.push(holder.address)
 
-        const profile = await this.profiler.profile(
-          this.connection,
-          holder.address,
-          token.mint,
-        )
+        const profile = await this.profiler.profile(this.connection, holder.address, token.mint)
 
         scored.push(scoreLoan(token, holder.address, position, profile))
       } catch {

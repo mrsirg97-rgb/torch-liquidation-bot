@@ -23,11 +23,7 @@ export class WalletProfiler {
     this.log = log
   }
 
-  async profile(
-    connection: Connection,
-    address: string,
-    mint: string,
-  ): Promise<WalletProfile> {
+  async profile(connection: Connection, address: string, mint: string): Promise<WalletProfile> {
     const cached = this.cache.get(address)
     if (cached && Date.now() - cached.lastUpdated < PROFILE_COOLDOWN_MS) {
       return cached
