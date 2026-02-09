@@ -1,6 +1,6 @@
 {
   "name": "torch-liquidation-bot",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "lending position monitor and auto-liquidation skill using the torchsdk",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

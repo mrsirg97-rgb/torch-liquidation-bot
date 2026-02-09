@@ -7,9 +7,9 @@
  * profitable liquidations.
  *
  * modes:
- *   info      — display lending parameters for a token (or all tokens)
+ *   info      — display lending parameters for a token (or all tokens) (default)
  *   watch     — monitor your own loan health in real-time
- *   bot       — run the full liquidation bot (default)
+ *   bot       — run the full liquidation bot
  *
  * usage:
  *   # show all migrated tokens with lending
@@ -158,7 +158,7 @@ async function watchPosition(connection: Connection, mint: string, wallet: Keypa
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const MODE = process.env.MODE ?? 'bot'
+  const MODE = process.env.MODE ?? 'info'
   const MINT = process.env.MINT
   const RPC_URL = process.env.RPC_URL ?? 'https://api.mainnet-beta.solana.com'
 
