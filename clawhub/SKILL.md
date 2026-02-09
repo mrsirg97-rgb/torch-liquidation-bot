@@ -1,20 +1,21 @@
 ---
-name: torch-liquidation-bot
+name: torch-liquidation-agent
 description: a read-only lending market scanner that discovers Torch Market positions, profiles borrower wallets, and scores loan risk. Optionally executes liquidations when the user provides a wallet keypair.
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.4"
-  clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationbot
-  npm: https://www.npmjs.com/package/torch-liquidation-bot
+  version: "1.0.0"
+  clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationagent
+  npm: https://www.npmjs.com/package/torch-liquidation-agent
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
+  agentkit: https://github.com/mrsirg97-rgb/solana-agent-kit-torch-market
   sdk: https://github.com/mrsirg97-rgb/torchsdk
 compatibility: Requires a Solana RPC endpoint. Default info mode is fully read-only. Wallet keypair only needed if the user opts into bot or watch mode. Distributed via npm.
 ---
 
-# Torch Liquidation Bot
+# Torch Liquidation Agent
 
-A skill that monitors Torch Market lending positions across all tokens, profiles borrower wallets for risk, and predicts which loans are likely to fail. In bot mode, it can execute liquidations on positions that have crossed the on-chain threshold.
+A skill utilizing the torchsdk plugin with the solana agent kit. that monitors Torch Market lending positions across all tokens, profiles borrower wallets for risk, and predicts which loans are likely to fail. In bot mode, it can execute liquidations on positions that have crossed the on-chain threshold.
 
 ## What This Skill Does
 

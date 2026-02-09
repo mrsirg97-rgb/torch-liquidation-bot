@@ -1,10 +1,12 @@
 /**
  * config.ts — loads environment variables into a typed BotConfig.
+ *
+ * creates a SolanaAgentKit instance from the wallet key + RPC URL.
  */
 
-import { Keypair } from '@solana/web3.js'
+import { Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { SolanaAgentKit, KeypairWallet } from 'solana-agent-kit'
 import bs58 from 'bs58'
-import { LAMPORTS_PER_SOL } from 'torchsdk'
 import type { BotConfig, LogLevel } from './types'
 
 const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error']
@@ -37,9 +39,12 @@ export function loadConfig(): BotConfig {
     throw new Error('PRICE_HISTORY must be >= 2')
   if (isNaN(minProfitSol) || minProfitSol < 0) throw new Error('MIN_PROFIT_SOL must be >= 0')
 
+  const keypair = Keypair.fromSecretKey(bs58.decode(walletKey))
+  const wallet = new KeypairWallet(keypair, rpcUrl)
+  const agent = new SolanaAgentKit(wallet, rpcUrl, {})
+
   return {
-    rpcUrl,
-    walletKeypair: Keypair.fromSecretKey(bs58.decode(walletKey)),
+    agent,
     scanIntervalMs,
     scoreIntervalMs,
     minProfitLamports: Math.floor(minProfitSol * LAMPORTS_PER_SOL),
