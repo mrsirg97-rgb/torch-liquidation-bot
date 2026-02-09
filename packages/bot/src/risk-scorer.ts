@@ -38,9 +38,15 @@ export function scoreLoan(
     100,
   )
 
-  // estimated profit = collateral value * liquidation bonus
+  // estimated profit = collateral value * liquidation bonus - fees
   const bonusPct = token.lendingInfo.liquidation_bonus_bps / 10000
-  const estimatedProfitLamports = Math.floor(position.collateral_value_sol * bonusPct)
+  const grossProfit = position.collateral_value_sol * bonusPct
+  const txFeeLamports = 5000 // ~0.000005 SOL per tx
+  const transferFeeLamports = Math.floor(position.collateral_value_sol * 0.01) // Token-2022 1% fee
+  const estimatedProfitLamports = Math.max(
+    0,
+    Math.floor(grossProfit) - txFeeLamports - transferFeeLamports,
+  )
 
   return {
     mint: token.mint,

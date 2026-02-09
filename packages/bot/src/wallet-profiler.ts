@@ -14,6 +14,8 @@ import type { Logger } from './logger'
 import { clamp } from './utils'
 
 const PROFILE_COOLDOWN_MS = 5 * 60 * 1000 // refresh profiles every 5 min
+const MAX_CACHE_AGE_MS = 30 * 60 * 1000 // evict entries older than 30 min
+const MAX_CACHE_SIZE = 1000 // hard cap on cache entries
 
 export class WalletProfiler {
   private cache = new Map<string, WalletProfile>()
@@ -24,6 +26,8 @@ export class WalletProfiler {
   }
 
   async profile(connection: Connection, address: string, mint: string): Promise<WalletProfile> {
+    this.evictStale()
+
     const cached = this.cache.get(address)
     if (cached && Date.now() - cached.lastUpdated < PROFILE_COOLDOWN_MS) {
       return cached
@@ -116,5 +120,22 @@ export class WalletProfiler {
     }
 
     return clamp(Math.round(risk), 0, 100)
+  }
+
+  private evictStale(): void {
+    const now = Date.now()
+    for (const [key, profile] of this.cache) {
+      if (now - profile.lastUpdated > MAX_CACHE_AGE_MS) {
+        this.cache.delete(key)
+      }
+    }
+    // hard cap: if still too large, evict oldest entries
+    if (this.cache.size > MAX_CACHE_SIZE) {
+      const sorted = [...this.cache.entries()].sort((a, b) => a[1].lastUpdated - b[1].lastUpdated)
+      const toEvict = sorted.slice(0, this.cache.size - MAX_CACHE_SIZE)
+      for (const [key] of toEvict) {
+        this.cache.delete(key)
+      }
+    }
   }
 }

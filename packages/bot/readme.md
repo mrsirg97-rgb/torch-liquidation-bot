@@ -22,7 +22,7 @@ This bot finds those opportunities before other bots do by **predicting** which 
 ## Quick Start
 
 ```bash
-MODE=bot WALLET=<base58-private-key> RPC_URL=<rpc-endpoint> npx tsx src/index.ts
+MODE=bot WALLET=<base58-private-key> RPC_URL=<rpc-endpoint> npx torch-liquidation-bot
 ```
 
 ## Modes
@@ -34,26 +34,26 @@ Runs two concurrent loops:
 - **Score loop** (every 15s) -- profiles borrowers, scores loans, executes liquidations
 
 ```bash
-MODE=bot WALLET=<key> RPC_URL=<rpc> npx tsx src/index.ts
+MODE=bot WALLET=<key> RPC_URL=<rpc> npx torch-liquidation-bot
 ```
 
 ### `info` -- display lending parameters
 
 ```bash
 # all migrated tokens with lending
-MODE=info RPC_URL=<rpc> npx tsx src/index.ts
+MODE=info RPC_URL=<rpc> npx torch-liquidation-bot
 
 # specific token
-MODE=info MINT=<mint> RPC_URL=<rpc> npx tsx src/index.ts
+MODE=info MINT=<mint> RPC_URL=<rpc> npx torch-liquidation-bot
 ```
 
 ### `watch` -- monitor your own loan health
 
 ```bash
-MODE=watch MINT=<mint> WALLET=<key> RPC_URL=<rpc> npx tsx src/index.ts
+MODE=watch MINT=<mint> WALLET=<key> RPC_URL=<rpc> npx torch-liquidation-bot
 
 # with auto-repay if your position becomes liquidatable
-MODE=watch MINT=<mint> WALLET=<key> AUTO_REPAY=true RPC_URL=<rpc> npx tsx src/index.ts
+MODE=watch MINT=<mint> WALLET=<key> AUTO_REPAY=true RPC_URL=<rpc> npx torch-liquidation-bot
 ```
 
 ## Risk Scoring

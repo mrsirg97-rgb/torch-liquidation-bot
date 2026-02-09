@@ -4,11 +4,12 @@ description: a multi-token bot that discovers lending markets, profiles borrower
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.0"
+  version: "1.0.2"
   clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationbot
+  npm: https://www.npmjs.com/package/torch-liquidation-bot
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
   sdk: https://github.com/mrsirg97-rgb/torchsdk
-compatibility: Requires a Solana RPC endpoint and a Solana wallet for signing transactions. No API server dependency.
+compatibility: Requires a Solana RPC endpoint. Wallet signing required for bot/watch modes only. Distributed via npm -- no external code fetching.
 ---
 
 # Torch Liquidation Bot
@@ -79,21 +80,22 @@ Each file handles a single responsibility. The bot runs two concurrent loops:
 - **Scan loop** (default: every 60s) -- discovers tokens with active lending, snapshots prices
 - **Score loop** (default: every 15s) -- profiles borrowers, scores loans, executes liquidations
 
+## Security Model
+
+- **No external code fetching.** Distributed as a compiled npm package. All code runs from `node_modules/torch-liquidation-bot/dist/`. No `git clone`, no remote script execution, no post-install hooks.
+- **Private keys never leave the process.** The `WALLET` env var is decoded into a `Keypair` object once at startup, used only for local transaction signing via `sendAndConfirmTransaction`, and never logged, serialized, or transmitted to any external service.
+- **Info mode requires no wallet at all.** `MODE=info` is fully read-only -- no signing, no state changes, no private key needed.
+- **All transactions are built locally.** The torchsdk uses the Anchor IDL to construct instructions client-side. No API middleman. The on-chain program validates all parameters.
+- **Only two outbound call targets:** Solana RPC (via `@solana/web3.js`) and SAID Protocol API (via `torchsdk.verifySaid`). No telemetry, analytics, or third-party services.
+- **Minimum profit threshold.** Prevents dust attacks and gas-wasting executions. Default: 0.01 SOL. Fee-adjusted (subtracts tx fee + Token-2022 1% transfer fee).
+- **Config bounds validation.** All numeric config values are validated at startup (intervals >= 1000ms, thresholds 0-100, etc.) to prevent misconfiguration.
+
 ## Setup
-
-### Requirements
-
-- Node.js 18+
-- Solana RPC endpoint
-- Solana wallet with SOL for transaction fees
-- `torchsdk` (included as dependency)
 
 ### Install
 
 ```bash
-git clone https://github.com/mrsirg97-rgb/torch-liquidation-bot
-cd torch-liquidation-bot/packages/bot
-pnpm install
+npm install torch-liquidation-bot
 ```
 
 ### Environment Variables
@@ -117,26 +119,28 @@ pnpm install
 
 ```bash
 # run the liquidation bot
-MODE=bot WALLET=<key> RPC_URL=<rpc> npx tsx src/index.ts
+MODE=bot WALLET=<key> RPC_URL=<rpc> npx torch-liquidation-bot
 
-# show lending info for all migrated tokens
-MODE=info RPC_URL=<rpc> npx tsx src/index.ts
+# show lending info for all migrated tokens (no wallet needed)
+MODE=info RPC_URL=<rpc> npx torch-liquidation-bot
 
 # show lending info for a specific token
-MODE=info MINT=<mint> RPC_URL=<rpc> npx tsx src/index.ts
+MODE=info MINT=<mint> RPC_URL=<rpc> npx torch-liquidation-bot
 
 # watch your own loan health
-MODE=watch MINT=<mint> WALLET=<key> RPC_URL=<rpc> npx tsx src/index.ts
+MODE=watch MINT=<mint> WALLET=<key> RPC_URL=<rpc> npx torch-liquidation-bot
 ```
 
-### Test
+### Programmatic Usage
 
-Requires [Surfpool](https://github.com/nicholasgasior/surfpool) running a mainnet fork:
+```typescript
+import { Monitor, loadConfig } from 'torch-liquidation-bot'
+import { Connection } from '@solana/web3.js'
 
-```bash
-surfpool start --network mainnet --no-tui
-pnpm test       # original lending test
-pnpm test:bot   # bot module test
+const config = loadConfig()
+const connection = new Connection(config.rpcUrl, 'confirmed')
+const monitor = new Monitor(connection, config)
+await monitor.start()
 ```
 
 ## Key Types
