@@ -4,7 +4,7 @@ description: a multi-token bot that discovers lending markets, profiles borrower
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.2"
+  version: "1.0.3"
   clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationbot
   npm: https://www.npmjs.com/package/torch-liquidation-bot
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
@@ -208,6 +208,7 @@ All transactions are built locally via the Anchor IDL and signed with your own k
 
 ## Links
 
+- Source Code: [github.com/mrsirg97-rgb/torch-liquidation-bot](https://github.com/mrsirg97-rgb/torch-liquidation-bot)
 - Torch SDK: [github.com/mrsirg97-rgb/torchsdk](https://github.com/mrsirg97-rgb/torchsdk)
 - Torch Market: [torch.market](https://torch.market)
 - ClawHub: [clawhub.ai/mrsirg97-rgb/torchliquidationbot](https://clawhub.ai/mrsirg97-rgb/torchliquidationbot)
