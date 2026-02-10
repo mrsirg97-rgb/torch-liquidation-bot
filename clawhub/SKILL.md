@@ -9,7 +9,7 @@ metadata:
   npm: https://www.npmjs.com/package/torch-liquidation-agent
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
   agentkit: https://github.com/mrsirg97-rgb/solana-agent-kit-torch-market
-  audit: https://github.com/mrsirg97-rgb/torch-liquidation-bot/audits/audit_agent.md
+  audit: https://github.com/mrsirg97-rgb/torch-liquidation-bot/blob/main/audits/audit_agent.md
 compatibility: Requires solana-agent-kit ^2.0.0 and solana-agent-kit-torch-market ^3.0.8. Solana RPC endpoint required. Default info mode is fully read-only -- no wallet loaded, no signing, no state changes. Wallet keypair only needed for optional bot or watch mode.
 ---
 
