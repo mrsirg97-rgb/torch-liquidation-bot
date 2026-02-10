@@ -6,12 +6,13 @@
  *
  * profiles are cached in-memory with a cooldown to avoid hammering RPC.
  *
- * uses the torch agent kit for trade messages and calls the SAID API
- * directly for wallet reputation verification.
+ * all external calls go through solana-agent-kit-torch-market:
+ *   - torchGetMessages for trade history
+ *   - torchVerifySaid for SAID reputation
  */
 
 import type { SolanaAgentKit } from 'solana-agent-kit'
-import { torchGetMessages } from 'solana-agent-kit-torch-market'
+import { torchGetMessages, torchVerifySaid } from 'solana-agent-kit-torch-market'
 import type { WalletProfile, TradeStats } from './types'
 import type { Logger } from './logger'
 import { clamp } from './utils'
@@ -19,26 +20,6 @@ import { clamp } from './utils'
 const PROFILE_COOLDOWN_MS = 5 * 60 * 1000 // refresh profiles every 5 min
 const MAX_CACHE_AGE_MS = 30 * 60 * 1000 // evict entries older than 30 min
 const MAX_CACHE_SIZE = 1000 // hard cap on cache entries
-const SAID_API_URL = 'https://api.saidprotocol.com/api'
-
-interface SaidVerification {
-  verified: boolean
-  trustTier: 'high' | 'medium' | 'low' | null
-}
-
-async function verifySaid(address: string): Promise<SaidVerification> {
-  try {
-    const res = await fetch(`${SAID_API_URL}/verify/${address}`)
-    if (!res.ok) return { verified: false, trustTier: null }
-    const data = (await res.json()) as { verified?: boolean; trust_tier?: string }
-    return {
-      verified: data.verified ?? false,
-      trustTier: (data.trust_tier as 'high' | 'medium' | 'low') ?? null,
-    }
-  } catch {
-    return { verified: false, trustTier: null }
-  }
-}
 
 export class WalletProfiler {
   private cache = new Map<string, WalletProfile>()
@@ -58,8 +39,8 @@ export class WalletProfiler {
 
     this.log.debug(`profiling wallet ${address.slice(0, 8)}...`)
 
-    // SAID reputation
-    const said = await verifySaid(address)
+    // SAID reputation (via agent kit plugin)
+    const said = await torchVerifySaid(agent, address)
 
     // trade history from messages
     const tradeStats = await this.analyzeTradeHistory(agent, mint, address)

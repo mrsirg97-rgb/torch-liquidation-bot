@@ -1,28 +1,29 @@
 ---
 name: torch-liquidation-agent
-description: Read-only by default. Solana Agent Kit skill that scans Torch Market lending markets, profiles borrower wallets for risk, and scores loans by how likely they are to fail. In bot mode, it can execute liquidations on positions that have crossed the on-chain threshold. Default info mode requires no wallet and makes no state changes.
+description: Read-only lending market scanner for Torch Market on Solana. No wallet required. Scans lending markets, profiles borrower wallets, and scores loans by risk. Default info mode makes no state changes and requires only an RPC endpoint. Optional bot mode (requires wallet) can execute liquidations on positions that crossed the on-chain threshold.
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.2"
+  version: "1.0.3"
   clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationagent
   npm: https://www.npmjs.com/package/torch-liquidation-agent
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
   agentkit: https://github.com/mrsirg97-rgb/solana-agent-kit-torch-market
-compatibility: Requires solana-agent-kit ^2.0.0 and solana-agent-kit-torch-market ^3.0.6. Solana RPC endpoint required. Default info mode is fully read-only. Wallet keypair only needed for bot or watch mode.
+  audit: https://github.com/mrsirg97-rgb/torch-liquidation-bot/audits/audit_agent.md
+compatibility: Requires solana-agent-kit ^2.0.0 and solana-agent-kit-torch-market ^3.0.8. Solana RPC endpoint required. Default info mode is fully read-only -- no wallet loaded, no signing, no state changes. Wallet keypair only needed for optional bot or watch mode.
 ---
 
 # Torch Liquidation Agent
 
-A Solana Agent Kit skill that monitors lending positions on [Torch Market](https://torch.market), profiles borrower wallets for risk, and predicts which loans are likely to fail. In bot mode, it can execute liquidations on positions that have crossed the on-chain threshold.
+Read-only lending market scanner for [Torch Market](https://torch.market) on Solana. No wallet required. Only an RPC endpoint is needed to run the default mode.
 
-Built on [solana-agent-kit-torch-market](https://www.npmjs.com/package/solana-agent-kit-torch-market) -- all lending reads, liquidations, repayments, and SAID confirmations go through the agent kit plugin.
+Built on [solana-agent-kit-torch-market](https://www.npmjs.com/package/solana-agent-kit-torch-market) -- all Solana RPC calls, lending reads, SAID lookups, and (optional) transactions go through the agent kit plugin. This skill makes **no direct network calls** of any kind.
 
 ## What This Skill Does
 
 This skill scans lending markets on Torch Market, a fair-launch DAO launchpad on Solana. Every migrated token on Torch has a built-in lending market where holders can borrow SOL against their tokens. When a borrower's collateral drops in value and their loan-to-value ratio exceeds 65%, the position becomes liquidatable on-chain per the protocol's rules.
 
-The skill's core value is **risk analysis** -- it profiles borrowers, tracks price trends, and scores every loan by how likely it is to fail. In info mode (no wallet required), it's purely a read-only dashboard. In bot mode, it can act on positions that cross the protocol threshold.
+The skill's core value is **risk analysis** -- it profiles borrowers, tracks price trends, and scores every loan by how likely it is to fail. In the default info mode, it's a read-only dashboard that requires no wallet and makes no state changes. An optional bot mode (wallet required, off by default) can act on positions that cross the protocol threshold.
 
 ### How It Works
 
@@ -43,11 +44,11 @@ scan all tokens with active lending
 
 ### Three Modes
 
-| Mode | Purpose | Requires Wallet |
-|------|---------|----------------|
-| `info` (default) | Display lending parameters for a token or all tokens | no |
-| `bot` | Scan and score positions; execute liquidations when threshold is met | yes |
-| `watch` | Monitor your own loan health in real-time | yes |
+| Mode | Purpose | Wallet | State Changes |
+|------|---------|--------|---------------|
+| `info` (default) | Display lending parameters for a token or all tokens | not required | none (read-only) |
+| `bot` | Scan and score positions; execute liquidations when threshold is met | required | yes (transactions) |
+| `watch` | Monitor your own loan health in real-time | required | optional (auto-repay) |
 
 ### Risk Scoring
 
@@ -85,15 +86,19 @@ Each file handles a single responsibility. The bot runs two concurrent loops:
 
 ## Network & Permissions
 
-- **Default mode (`info`) is read-only** -- no wallet needed, no signing, no state changes.
-- **Outbound connections**: Solana RPC (via `solana-agent-kit`) and SAID Protocol API (via `fetch` to `api.saidprotocol.com`). No telemetry or third-party services.
+- **Default mode (`info`) is read-only** -- no wallet is loaded, no keypair is decoded, no signing occurs, no state changes. Only `RPC_URL` is required.
+- **No direct network calls from this skill** -- zero `fetch()`, zero HTTP clients, zero outbound URLs in the source code. All outbound connections go through dependencies: Solana RPC (via `solana-agent-kit`) and SAID Protocol API (via `solana-agent-kit-torch-market`). No telemetry or third-party services. Confirmed by audit (`audits/audit_agent.md`, finding I-1).
+- **Private keys never leave the process** -- when a wallet is provided (bot/watch mode only), it is decoded once, wrapped in `KeypairWallet`, and used only for signing via `SolanaAgentKit`. The raw key bytes are never logged, serialized, stored, or transmitted. Confirmed by audit (finding I-2).
 - **Distributed via npm** -- all code runs from `node_modules/`. No post-install hooks, no remote code fetching.
 - **Transactions are constructed by the agent kit plugin** (`solana-agent-kit-torch-market`) and signed client-side via `SolanaAgentKit`. The on-chain program validates all parameters.
-- **SAID API calls are non-fatal** -- if `api.saidprotocol.com` is unreachable, the skill continues with a neutral risk score. Only public wallet addresses (already visible on-chain) are sent.
 
 ## Available Actions
 
-These are the Torch Market plugin actions this skill uses for lending operations:
+All actions are provided by the `solana-agent-kit-torch-market` plugin. This skill contains no direct network calls -- every outbound connection is routed through the plugin.
+
+### Read-only actions (no wallet, no signing, no state changes)
+
+These are the only actions used in the default `info` mode:
 
 | Action | Description |
 |--------|-------------|
@@ -102,6 +107,14 @@ These are the Torch Market plugin actions this skill uses for lending operations
 | `TORCH_GET_LENDING_INFO` | Get lending parameters -- rates, thresholds, treasury balance |
 | `TORCH_GET_LOAN_POSITION` | Get a borrower's loan health, LTV, collateral, and debt |
 | `TORCH_GET_MESSAGES` | Read trade history for borrower wallet profiling |
+| `TORCH_VERIFY_SAID` | Check SAID Protocol verification status and trust tier for a wallet |
+
+### Write actions (wallet required, off by default)
+
+Only used when `MODE=bot` or `MODE=watch` is explicitly set:
+
+| Action | Description |
+|--------|-------------|
 | `TORCH_LIQUIDATE_LOAN` | Execute a liquidation on an underwater position |
 | `TORCH_REPAY_LOAN` | Repay borrowed SOL (used in watch mode auto-repay) |
 | `TORCH_CONFIRM` | Report transaction to SAID Protocol for reputation |
