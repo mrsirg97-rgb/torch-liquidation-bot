@@ -1,15 +1,15 @@
 ---
 name: torch-liquidation-bot
-description: Read-only lending market scanner for Torch Market on Solana. No wallet required. Scans lending markets, profiles borrower wallets, and scores loans by risk. Default info mode makes no state changes and requires only an RPC endpoint. Optional bot mode (requires wallet) can execute liquidations on positions that crossed the on-chain threshold.
+description: Read-only lending market scanner for Torch Market on Solana. No wallet required. Scans lending markets, profiles borrower wallets, and scores loans by risk. optional bot or watch mode availabile but carries inherent risks and is disabled by deafult. Info mode (default) makes no state changes and requires only an RPC endpoint. .
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.8"
+  version: "1.0.9"
   clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationbot
   npm: https://www.npmjs.com/package/torch-liquidation-bot
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
   sdk: https://github.com/mrsirg97-rgb/torchsdk
-compatibility: Requires a Solana RPC endpoint. Default info mode is fully read-only -- no wallet loaded, no signing, no state changes. Wallet keypair only needed for optional bot or watch mode. Distributed via npm.
+compatibility: Requires a Solana RPC endpoint. Default info mode is fully read-only -- no wallet loaded, no signing, no state changes. optional bot or watch mode availabile but carries inherent risks and is disabled unless explicitly configured. read-only mode recommended. Distributed via npm.
 ---
 
 # Torch Liquidation Bot
