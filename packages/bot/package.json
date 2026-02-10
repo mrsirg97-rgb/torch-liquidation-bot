@@ -1,6 +1,6 @@
 {
   "name": "torch-liquidation-bot",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "lending position monitor and auto-liquidation skill using the torchsdk",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,7 +13,8 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "test": "npx tsx tests/test_lending.ts",
+    "test": "npx tsx tests/test_readonly.ts",
+    "test:lending": "npx tsx tests/test_lending.ts",
     "test:bot": "npx tsx tests/test_bot.ts",
     "format": "prettier --write src/ tests/"
   },

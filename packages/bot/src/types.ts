@@ -95,3 +95,9 @@ export interface BotConfig {
   priceHistoryDepth: number // how many price snapshots to keep
   logLevel: LogLevel
 }
+
+// read-only config — no wallet, no signing, no state changes
+export interface ReadOnlyConfig {
+  rpcUrl: string
+  logLevel: LogLevel
+}

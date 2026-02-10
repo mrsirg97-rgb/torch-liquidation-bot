@@ -5,9 +5,27 @@
 import { Keypair } from '@solana/web3.js'
 import bs58 from 'bs58'
 import { LAMPORTS_PER_SOL } from 'torchsdk'
-import type { BotConfig, LogLevel } from './types'
+import type { BotConfig, ReadOnlyConfig, LogLevel } from './types'
 
 const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error']
+
+/**
+ * loadReadOnlyConfig — read-only config that only needs RPC_URL.
+ * no wallet loaded, no keypair decoded, no signing possible.
+ */
+export function loadReadOnlyConfig(): ReadOnlyConfig {
+  const rpcUrl = process.env.RPC_URL
+  if (!rpcUrl) throw new Error('RPC_URL env var is required')
+
+  const logLevel = (process.env.LOG_LEVEL ?? 'info') as LogLevel
+  if (!LOG_LEVELS.includes(logLevel)) {
+    throw new Error(`LOG_LEVEL must be one of: ${LOG_LEVELS.join(', ')}`)
+  }
+
+  return { rpcUrl, logLevel }
+}
+
+// --- wallet-dependent config below — retained for future release ---
 
 export function loadConfig(): BotConfig {
   const rpcUrl = process.env.RPC_URL
