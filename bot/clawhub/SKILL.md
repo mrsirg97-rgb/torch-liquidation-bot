@@ -4,7 +4,7 @@ description: a read-only lending market scanner that discovers Torch Market posi
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.4"
+  version: "1.0.6"
   clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationbot
   npm: https://www.npmjs.com/package/torch-liquidation-bot
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
