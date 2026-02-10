@@ -1,6 +1,6 @@
 {
   "name": "torch-liquidation-agent",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "lending position monitor and auto-liquidation skill using the torch-agent-kit",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
