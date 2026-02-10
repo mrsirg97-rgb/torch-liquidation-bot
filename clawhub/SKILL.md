@@ -1,10 +1,10 @@
 ---
 name: torch-liquidation-agent
-description: Solana Agent Kit skill that monitors Torch Market lending positions, profiles borrower wallets, scores loan risk, and executes profitable liquidations autonomously.
+description: Read-only by default. Solana Agent Kit skill that monitors Torch Market lending positions, profiles borrower wallets, scores loan risk, and executes profitable liquidations autonomously. Default info mode requires no wallet and makes no state changes.
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.0"
+  version: "1.0.1"
   clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationagent
   npm: https://www.npmjs.com/package/torch-liquidation-agent
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
@@ -243,18 +243,57 @@ interface MonitoredToken {
 }
 ```
 
-## AI Safety
+## Security Model
 
-This skill is designed for autonomous agent operation:
+This section addresses the three categories flagged in the OpenClaw skill review: private key handling, financial transaction execution, and external network calls.
+
+### 1. Private Key Isolation
+
+The wallet keypair is read **once** from the `WALLET` environment variable in [`config.ts`](https://github.com/mrsirg97-rgb/torch-liquidation-bot/blob/main/packages/agent/src/config.ts) and immediately converted into a `KeypairWallet` → `SolanaAgentKit` instance. After initialization:
+
+- The raw key bytes are **never logged, serialized, stored, or transmitted** by any module in this skill
+- All transaction signing happens inside `SolanaAgentKit.signOrSendTX()` -- the skill never accesses the secret key directly
+- `info` mode does not require a wallet at all. A dummy keypair is generated for read-only RPC calls and discarded on exit
+- The key never leaves the local process. No outbound request includes key material
+
+```
+env WALLET → Keypair.fromSecretKey() → KeypairWallet → SolanaAgentKit
+                                                            ↓
+                                          agent.signOrSendTX(tx)  ← only signing path
+```
+
+### 2. On-Chain Transaction Validation
+
+This skill executes two types of write transactions: `torchLiquidateLoan` and `torchRepayLoan`. Both are validated by the on-chain Torch Market program (`8hbUkonssSEEtkqzwM7ZcZrD9evacM92TcWSooVF4BeT`):
+
+- **Liquidations are permissionless but program-validated** -- the on-chain instruction checks that the position's LTV exceeds the 65% liquidation threshold. If the position is healthy, the transaction fails. The skill cannot force a liquidation on a healthy position regardless of what parameters it sends
+- **Minimum profit threshold** (`MIN_PROFIT_SOL`, default `0.01`) -- the skill estimates profit before submitting and skips positions below the threshold. This prevents dust liquidations and wasted transaction fees
+- **Repayments are self-scoped** -- `torchRepayLoan` only repays debt belonging to the signing wallet. It cannot affect other users' positions
+- **No arbitrary instruction construction** -- the skill does not build raw Solana instructions. All transactions are constructed by the `solana-agent-kit-torch-market` plugin, which wraps the protocol SDK
+
+### 3. External Network Calls
+
+The skill makes exactly two categories of outbound calls. There is no telemetry, analytics, or reporting to any other endpoint.
+
+| Destination | Purpose | Data Sent | Failure Mode |
+|-------------|---------|-----------|--------------|
+| Solana RPC (`RPC_URL`) | All on-chain reads and transaction submission | Standard Solana JSON-RPC requests | Fatal -- skill cannot operate without RPC |
+| SAID Protocol API (`api.saidprotocol.com/api/verify/{address}`) | Look up borrower wallet trust tier for risk scoring | Public wallet address only | **Non-fatal** -- skill continues with neutral risk score (50) if SAID is unreachable |
+
+SAID Protocol details:
+- Called in [`wallet-profiler.ts`](https://github.com/mrsirg97-rgb/torch-liquidation-bot/blob/main/packages/agent/src/wallet-profiler.ts) via a single `GET` request per borrower
+- Sends only the **public** wallet address (already visible on-chain)
+- Response is cached in-memory for the session -- each borrower is queried at most once
+- If the API returns an error or is unreachable, the profiler returns `{ verified: false, trustTier: null }` and the risk scorer assigns a neutral 50/100 wallet risk. The bot continues normally
+- `torchConfirm` (SAID reputation write) is also non-fatal -- a failed confirmation is logged and skipped
+
+### General Safety Properties
 
 - **Read-only default** -- `info` mode requires no wallet and makes no state changes
-- **Minimum profit threshold** -- prevents unprofitable or dust liquidations (default: 0.01 SOL)
-- **All transactions signed by SolanaAgentKit** via `KeypairWallet` -- keys never leave your environment
-- **Deterministic risk scoring** -- transparent 4-factor model with configurable threshold, no black-box decisions
-- **Per-token error isolation** -- a failure on one token doesn't crash the bot or affect other markets
-- **Graceful shutdown** -- SIGINT handler stops both loops cleanly
-- **No hidden network calls** -- only Solana RPC and SAID Protocol API (`api.saidprotocol.com`). No telemetry
-- **Liquidations are permissionless on-chain** -- the protocol validates all parameters. The skill cannot liquidate healthy positions
+- **Deterministic risk scoring** -- transparent 4-factor model with configurable weights and threshold, no black-box decisions
+- **Per-token error isolation** -- a failure on one token does not crash the bot or affect other markets
+- **Graceful shutdown** -- SIGINT handler stops both scan and score loops cleanly
+- **Full source available** -- [github.com/mrsirg97-rgb/torch-liquidation-bot](https://github.com/mrsirg97-rgb/torch-liquidation-bot)
 
 ## SAID Protocol Integration
 
