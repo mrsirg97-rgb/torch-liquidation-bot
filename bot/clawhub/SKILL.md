@@ -1,26 +1,27 @@
 ---
 name: torch-liquidation-bot
-description: a read-only lending market scanner that discovers Torch Market positions, profiles borrower wallets, and scores loan risk. Optionally executes liquidations when the user provides a wallet keypair.
+description: Read-only lending market scanner for Torch Market on Solana. No wallet required. Scans lending markets, profiles borrower wallets, and scores loans by risk. Default info mode makes no state changes and requires only an RPC endpoint. Optional bot mode (requires wallet) can execute liquidations on positions that crossed the on-chain threshold.
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.6"
+  version: "1.0.7"
   clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationbot
   npm: https://www.npmjs.com/package/torch-liquidation-bot
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
   sdk: https://github.com/mrsirg97-rgb/torchsdk
-compatibility: Requires a Solana RPC endpoint. Default info mode is fully read-only. Wallet keypair only needed if the user opts into bot or watch mode. Distributed via npm.
+  audit: https://github.com/mrsirg97-rgb/torch-liquidation-bot/blob/main/audits/audit_botsdk.md
+compatibility: Requires a Solana RPC endpoint. Default info mode is fully read-only -- no wallet loaded, no signing, no state changes. Wallet keypair only needed for optional bot or watch mode. Distributed via npm.
 ---
 
 # Torch Liquidation Bot
 
-A skill that monitors Torch Market lending positions across all tokens, profiles borrower wallets for risk, and predicts which loans are likely to fail. In bot mode, it can execute liquidations on positions that have crossed the on-chain threshold.
+Read-only lending market scanner for [Torch Market](https://torch.market) on Solana. No wallet required. Only an RPC endpoint is needed to run the default mode.
 
 ## What This Skill Does
 
-This skill scans lending markets on [Torch Market](https://torch.market), a fair-launch DAO launchpad on Solana. Every migrated token on Torch has a built-in lending market where holders can borrow SOL against their tokens. When a borrower's collateral drops in value and their loan-to-value ratio exceeds 65%, the position becomes liquidatable on-chain per the protocol's rules.
+This skill scans lending markets on Torch Market, a fair-launch DAO launchpad on Solana. Every migrated token on Torch has a built-in lending market where holders can borrow SOL against their tokens. When a borrower's collateral drops in value and their loan-to-value ratio exceeds 65%, the position becomes liquidatable on-chain per the protocol's rules.
 
-The skill's core value is **risk analysis** -- it profiles borrowers, tracks price trends, and scores every loan by how likely it is to fail. In `info` mode (no wallet required), it's purely a read-only dashboard. In `bot` mode, it can act on positions that cross the protocol threshold.
+The skill's core value is **risk analysis** -- it profiles borrowers, tracks price trends, and scores every loan by how likely it is to fail. In the default info mode, it's a read-only dashboard that requires no wallet and makes no state changes. An optional bot mode (wallet required, off by default) can act on positions that cross the protocol threshold.
 
 ## How It Works
 
@@ -41,11 +42,11 @@ scan all tokens with active lending
 
 ### Three Modes
 
-| Mode | Purpose | Requires Wallet |
-|------|---------|----------------|
-| `info` (default) | Display lending parameters for a token or all tokens | no |
-| `bot` | Scan and score positions; execute liquidations when threshold is met | yes |
-| `watch` | Monitor your own loan health in real-time | yes |
+| Mode | Purpose | Wallet | State Changes |
+|------|---------|--------|---------------|
+| `info` (default) | Display lending parameters for a token or all tokens | not required | none (read-only) |
+| `bot` | Scan and score positions; execute liquidations when threshold is met | required | yes (transactions) |
+| `watch` | Monitor your own loan health in real-time | required | optional (auto-repay) |
 
 ### Risk Scoring
 
@@ -82,9 +83,10 @@ Each file handles a single responsibility. The bot runs two concurrent loops:
 
 ## Network & Permissions
 
-- **Default mode (`info`) is read-only** — no wallet needed, no signing, no state changes.
-- **Outbound connections:** Solana RPC (via `@solana/web3.js`) and SAID Protocol API (via `torchsdk.verifySaid`). No telemetry or third-party services.
-- **Distributed via npm** — all code runs from `node_modules/`. No post-install hooks, no remote code fetching.
+- **Default mode (`info`) is read-only** -- no wallet is loaded, no keypair is decoded, no signing occurs, no state changes. Only `RPC_URL` is required.
+- **Outbound connections:** Solana RPC (via `@solana/web3.js`) and SAID Protocol API (via `torchsdk.verifySaid`). No telemetry or third-party services. Confirmed by audit (`audits/audit_botsdk.md`, finding I-2).
+- **Private keys never leave the process** -- when a wallet is provided (bot/watch mode only), it is decoded once, held as a `Keypair` object, and used only for local signing via `sendAndConfirmTransaction`. The raw key bytes are never logged, serialized, stored, or transmitted. Confirmed by audit (finding I-1).
+- **Distributed via npm** -- all code runs from `node_modules/`. No post-install hooks, no remote code fetching.
 - **Transactions are built locally** using the Anchor IDL and signed client-side. The on-chain program validates all parameters.
 
 ## Setup
@@ -100,7 +102,7 @@ npm install torch-liquidation-bot
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `RPC_URL` | yes | -- | Solana RPC endpoint |
-| `WALLET` | bot/watch only | -- | Solana wallet keypair (base58) |
+| `WALLET` | bot/watch only | -- | Solana wallet keypair (base58). Only loaded in bot/watch mode; never logged or transmitted (see audit I-1) |
 | `MODE` | no | `info` | `info`, `bot`, or `watch` |
 | `MINT` | no (info/watch) | -- | Token mint address for single-token modes |
 | `SCAN_INTERVAL_MS` | no | `60000` | How often to discover new lending markets |
