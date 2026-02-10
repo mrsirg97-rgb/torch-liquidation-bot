@@ -4,12 +4,11 @@ description: Read-only lending market scanner for Torch Market on Solana. No wal
 license: MIT
 metadata:
   author: torch-market
-  version: "1.0.7"
+  version: "1.0.8"
   clawhub: https://clawhub.ai/mrsirg97-rgb/torchliquidationbot
   npm: https://www.npmjs.com/package/torch-liquidation-bot
   github: https://github.com/mrsirg97-rgb/torch-liquidation-bot
   sdk: https://github.com/mrsirg97-rgb/torchsdk
-  audit: https://github.com/mrsirg97-rgb/torch-liquidation-bot/blob/main/audits/audit_botsdk.md
 compatibility: Requires a Solana RPC endpoint. Default info mode is fully read-only -- no wallet loaded, no signing, no state changes. Wallet keypair only needed for optional bot or watch mode. Distributed via npm.
 ---
 
@@ -213,3 +212,7 @@ All transactions are built locally via the Anchor IDL and signed client-side wit
 - ClawHub: [clawhub.ai/mrsirg97-rgb/torchliquidationbot](https://clawhub.ai/mrsirg97-rgb/torchliquidationbot)
 - SAID Protocol: [saidprotocol.com](https://saidprotocol.com)
 - Program ID: `8hbUkonssSEEtkqzwM7ZcZrD9evacM92TcWSooVF4BeT`
+
+**NOTE**
+
+an audit is provided in the repository [github.com/mrsirg97-rgb/torch-liquidation-bot](https://github.com/mrsirg97-rgb/torch-liquidation-bot) under audits/audit_botsdk.md. The audit covers security, correctness, and best practices for usage.
