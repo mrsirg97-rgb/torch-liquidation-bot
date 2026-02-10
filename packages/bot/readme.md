@@ -1,6 +1,8 @@
-# torch-liquidation-bot
+# torch-liquidation-bot v2.0.0 (Read-Only)
 
-Multi-token liquidation bot for [Torch Market](https://torch.market) lending on Solana. Discovers lending markets, profiles borrower wallets, predicts which loans are likely to fail, and executes profitable liquidations.
+Read-only lending market scanner for [Torch Market](https://torch.market) on Solana. No wallet required. Only an RPC endpoint is needed.
+
+> **v2.0.0 Breaking Change:** All wallet-dependent functionality (bot mode, watch mode, transaction signing) is deprecated. The entry point no longer imports or references any wallet, keypair, or signing code. Only read-only info mode is available.
 
 ## Install
 
@@ -8,97 +10,82 @@ Multi-token liquidation bot for [Torch Market](https://torch.market) lending on 
 npm install torch-liquidation-bot
 ```
 
-## How It Works
-
-Every migrated token on Torch has a built-in lending market. Holders borrow SOL against their tokens. When a borrower's loan-to-value ratio exceeds 65%, anyone can liquidate the position and collect a 10% bonus on the collateral.
-
-This bot finds those opportunities before other bots do by **predicting** which positions will go underwater:
-
-1. **Scan** -- discovers all tokens with active lending markets
-2. **Profile** -- checks each borrower's SAID reputation and trade history
-3. **Score** -- rates every loan on a 4-factor risk model (0-100)
-4. **Liquidate** -- executes when a position crosses the threshold and the profit exceeds your minimum
-
 ## Quick Start
 
 ```bash
-MODE=bot WALLET=<base58-private-key> RPC_URL=<rpc-endpoint> npx torch-liquidation-bot
+# show lending info for all migrated tokens
+RPC_URL=<rpc> npx torch-liquidation-bot
+
+# show lending info for a specific token
+MINT=<mint> RPC_URL=<rpc> npx torch-liquidation-bot
 ```
 
-## Modes
+## What It Does
 
-### `bot` (default) -- full liquidation bot
+Every migrated token on Torch has a built-in lending market. This skill discovers those markets and displays their parameters — interest rates, LTV thresholds, treasury balances, and active loan counts.
 
-Runs two concurrent loops:
-- **Scan loop** (every 60s) -- finds tokens with active lending, snapshots prices
-- **Score loop** (every 15s) -- profiles borrowers, scores loans, executes liquidations
-
-```bash
-MODE=bot WALLET=<key> RPC_URL=<rpc> npx torch-liquidation-bot
-```
-
-### `info` -- display lending parameters
-
-```bash
-# all migrated tokens with lending
-MODE=info RPC_URL=<rpc> npx torch-liquidation-bot
-
-# specific token
-MODE=info MINT=<mint> RPC_URL=<rpc> npx torch-liquidation-bot
-```
-
-### `watch` -- monitor your own loan health
-
-```bash
-MODE=watch MINT=<mint> WALLET=<key> RPC_URL=<rpc> npx torch-liquidation-bot
-
-# with auto-repay if your position becomes liquidatable
-MODE=watch MINT=<mint> WALLET=<key> AUTO_REPAY=true RPC_URL=<rpc> npx torch-liquidation-bot
-```
-
-## Risk Scoring
-
-Every loan gets a composite score from four weighted factors:
-
-| Factor | Weight | What It Measures |
-|--------|--------|------------------|
-| LTV proximity | 40% | How close to the 65% liquidation threshold |
-| Price momentum | 30% | Collateral price trend (linear regression on recent snapshots) |
-| Wallet risk | 20% | SAID trust tier + trade win/loss ratio |
-| Interest burden | 10% | Accrued interest relative to collateral value |
-
-Positions above the risk threshold (default: 60) are flagged and watched closely. Liquidatable positions with profit above your minimum are executed immediately, highest profit first.
+That's it. No wallet loaded. No transactions built. No state changes.
 
 ## Configuration
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `RPC_URL` | yes | -- | Solana RPC endpoint |
-| `WALLET` | bot/watch | -- | Base58 private key |
-| `MODE` | no | `bot` | `bot`, `info`, or `watch` |
-| `MINT` | info/watch | -- | Token mint address |
-| `SCAN_INTERVAL_MS` | no | `60000` | Token discovery interval |
-| `SCORE_INTERVAL_MS` | no | `15000` | Position scoring interval |
-| `MIN_PROFIT_SOL` | no | `0.01` | Minimum profit to execute liquidation |
-| `RISK_THRESHOLD` | no | `60` | Risk score cutoff for close monitoring |
-| `PRICE_HISTORY` | no | `20` | Price snapshots to keep for momentum |
+| `MINT` | no | -- | Token mint address (omit to show all tokens) |
 | `LOG_LEVEL` | no | `info` | `debug`, `info`, `warn`, `error` |
+
+No `WALLET`, no `MODE`, no bot-specific config.
+
+## Programmatic Usage
+
+```typescript
+import { loadReadOnlyConfig } from 'torch-liquidation-bot/config'
+import { Connection } from '@solana/web3.js'
+import { getTokens, getLendingInfo } from 'torchsdk'
+
+const config = loadReadOnlyConfig()
+const connection = new Connection(config.rpcUrl, 'confirmed')
+
+const { tokens } = await getTokens(connection, {
+  status: 'migrated',
+  sort: 'volume',
+  limit: 50,
+})
+
+for (const t of tokens) {
+  const lending = await getLendingInfo(connection, t.mint)
+  console.log(`${t.symbol}: ${lending.active_loans} active loans`)
+}
+```
 
 ## Architecture
 
 ```
-src/
-├── types.ts            — interfaces and contracts
-├── config.ts           — env vars → typed config
-├── logger.ts           — structured logging
+packages/bot/src/
+├── types.ts            — interfaces (ReadOnlyConfig + dormant BotConfig)
+├── config.ts           — loadReadOnlyConfig() (active) + loadConfig() (dormant)
 ├── utils.ts            — shared helpers
-├── scanner.ts          — discovers tokens with active lending
+└── index.ts            — read-only entry point
+
+dormant (retained for future release, not imported by index.ts):
+├── logger.ts           — structured logging
+├── scanner.ts          — token discovery
 ├── wallet-profiler.ts  — SAID reputation + trade history
 ├── risk-scorer.ts      — 4-factor risk model
-├── liquidator.ts       — executes liquidation txs
-├── monitor.ts          — scan + score orchestration
-└── index.ts            — entry point
+├── liquidator.ts       — liquidation execution
+└── monitor.ts          — scan + score orchestration
 ```
+
+## Deprecated (v1.x)
+
+The following functionality is preserved in the source files but is not imported or reachable from the entry point. It will be re-enabled in a future version after further security review.
+
+- `bot` mode — scan, score, and liquidate positions
+- `watch` mode — monitor loan health + auto-repay
+- `loadConfig()` — wallet keypair decoding
+- `loadWallet()` — private key loading
+- All transaction signing (`sendAndConfirmTransaction`)
+- All SAID Protocol write operations (`confirmTransaction`)
 
 ## Lending Parameters
 
@@ -116,23 +103,22 @@ Requires [Surfpool](https://github.com/nicholasgasior/surfpool) running a mainne
 
 ```bash
 surfpool start --network mainnet --no-tui
-pnpm test        # lending lifecycle test
-pnpm test:bot    # bot module test (scanner, profiler, scorer, liquidator)
+pnpm test            # read-only test (default)
+pnpm test:lending    # v1.x lending lifecycle test (requires wallet)
+pnpm test:bot        # v1.x bot module test (requires wallet)
 ```
 
 ## Security
 
-- Private keys loaded from env, never logged or transmitted
-- All transactions built locally via [torchsdk](https://github.com/mrsirg97-rgb/torchsdk) Anchor IDL
-- Unsigned transactions signed with your own keypair -- keys never leave your environment
-- Minimum profit threshold prevents unprofitable executions
-- Graceful shutdown on SIGINT
+- No wallet loaded, no keypair decoded, no private key in memory
+- No transaction building, no signing, no state changes
+- Outbound connections: Solana RPC only (no SAID API in active codepath)
+- Distributed via npm — no post-install hooks, no remote code fetching
 
 ## Links
 
-- [torchsdk](https://github.com/mrsirg97-rgb/torchsdk) -- the SDK this bot is built on
+- [torchsdk](https://github.com/mrsirg97-rgb/torchsdk) -- the SDK this skill reads from
 - [Torch Market](https://torch.market) -- the protocol
-- [SAID Protocol](https://saidprotocol.com) -- wallet reputation layer
 - [ClawHub](https://clawhub.ai/mrsirg97-rgb/torchliquidationbot) -- skill registry
 
 ## License
